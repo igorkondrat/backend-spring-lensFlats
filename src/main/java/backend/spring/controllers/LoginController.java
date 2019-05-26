@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 @Controller
-public class MainController {
+public class LoginController {
 
     private UserDao userDao;
 
     @Autowired
-    public MainController(UserDao userDao) {
+    public LoginController(UserDao userDao) {
         this.userDao = userDao;
     }
 
