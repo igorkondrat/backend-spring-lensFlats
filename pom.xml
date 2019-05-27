@@ -56,28 +56,22 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-core</artifactId>
-            <version>5.1.5.RELEASE</version>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-jwt</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+            <version>2.0.4.RELEASE</version>
         </dependency>
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt</artifactId>
-            <version>0.9.1</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+            <version>2.1.1.RELEASE</version>
         </dependency>
         <dependency>
-            <groupId>com.vaadin.external.google</groupId>
-            <artifactId>android-json</artifactId>
-            <version>0.0.20131108.vaadin1</version>
-            <scope>compile</scope>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-java8</artifactId>
         </dependency>
         <dependency>
             <groupId>org.webjars</groupId>
@@ -94,18 +88,20 @@
             <version>2.3.3</version>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-            <version>2.0.4.RELEASE</version>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <version>5.1.5.RELEASE</version>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-            <version>2.1.1.RELEASE</version>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>0.9.1</version>
         </dependency>
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-java8</artifactId>
+            <groupId>com.vaadin.external.google</groupId>
+            <artifactId>android-json</artifactId>
+            <version>0.0.20131108.vaadin1</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
