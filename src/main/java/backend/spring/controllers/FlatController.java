@@ -65,21 +65,28 @@ public class FlatController {
             flat.setUser(user);
             flat.setPhotoFlats("standartFlatPicture.png");
             flat.setAverageRating(0.0);
+            flat.setWallingMaterial("");
             flatDao.save(flat);
             return JSONObject.quote("You created flat");
         } else return JSONObject.quote("Something wrong :(");
     }
 
     @PostMapping("/updateFlat")
-    public String updateUser(@RequestBody Flat flat) {
+    public String updateFlat(@RequestBody Flat flat) {
         flat.setUser(userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName()));
         for (String flatPhoto : flatDao.getFlatById(flat.getId()).getListPhotoFlats()) {
             flat.setPhotoFlats(flatPhoto);
         }
         Flat flatById = flatDao.getFlatById(flat.getId());
-        if (flatById != null && flat.getSquare() > 0 && flat.getRooms() > 0 && flat.getPrice() > 0 && flat.getFloor() > 0
-                && flat.getGuests() > 0 && flat.getStoreys() > 0) {
+        if (flatById != null
+                && flat.getSquare() > 0
+                && flat.getRooms() > 0
+                && flat.getPrice() > 0
+                && flat.getFloor() > 0
+                && flat.getGuests() > 0
+                && flat.getStoreys() > 0) {
             flat.setAverageRating(flatById.getAverageRating());
+            flatById.setWallingMaterial(flat.getWallingMaterial());
             for (Double aDouble : flatById.getRating()) {
                 flat.setRating(aDouble);
             }
