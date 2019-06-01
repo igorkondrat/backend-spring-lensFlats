@@ -1,0 +1,35 @@
+<!--If many tests use threads-->
+<!--<suite name="Suite1" verbose="1" parallel="tests" thead-cout="3">-->
+<suite name="Suite1" verbose="1">
+    <test name="TestAll">
+        <groups>
+            <run>
+                <include name="unit"/>
+                <include name="exampleDb"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="backend.spring.controllers.FlatControllerTest"/>
+        </classes>
+    </test>
+    <test name="TestUnit">
+        <groups>
+            <run>
+                <include name="unit"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="backend.spring.controllers.FlatControllerTest"/>
+        </classes>
+    </test>
+    <test name="TestDb">
+        <groups>
+            <run>
+                <include name="exampleDb"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="backend.spring.controllers.FlatControllerTest"/>
+        </classes>
+    </test>
+</suite>
