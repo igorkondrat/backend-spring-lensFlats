@@ -39,12 +39,12 @@ public class FlatController {
     }
 
     @GetMapping("/getAllFlats")
-    public List<Flat> flats() {
+    public List<Flat> getAllFlats() {
         return flatDao.findAll();
     }
 
     @GetMapping("/getSingleFlat/{flatId}")
-    public Flat singleFlat(@PathVariable("flatId") Integer flatId) {
+    public Flat getFlat(@PathVariable("flatId") Integer flatId) {
         for (Flat flat : userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName()).getFlatList()) {
             if (flat.getId() == flatId) {
                 return flat;
@@ -54,7 +54,7 @@ public class FlatController {
     }
 
     @GetMapping("/getSingleFlatAnonymous/{flatId}")
-    public Flat singleFlatAnonymous(@PathVariable("flatId") Integer flatId) {
+    public Flat getFlatAnonymous(@PathVariable("flatId") Integer flatId) {
         return flatDao.getFlatById(flatId);
     }
 
