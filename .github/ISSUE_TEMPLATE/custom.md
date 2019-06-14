@@ -1,10 +1,12 @@
 ---
-name: Custom issue template
-about: Describe this issue template's purpose here.
-title: ''
-labels: ''
-assignees: ''
+## name: 0006-Task-Tests-cover-FlatController
+
+**about**: `Cover two methods in FlatController with tests.`
+
+**title**: `Tests cover FlatController`
+
+**labels:** `task`
+
+**assignees:** `igorkondrat`
 
 ---
-
-
