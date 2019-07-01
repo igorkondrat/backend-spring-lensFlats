@@ -1,31 +1,38 @@
 version: 2
 jobs:
   build:
+    working_directory: ~/spring-back/recipe
     docker:
       # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
+      - image: maven:1.8.0-jdk-8
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
+      environment:
+        DATABASE_URL: jdbc:mysql://127.0.0.1:8080/LensFlats
+        DATABASE_USER: root
+        DATABASE_PASSWORD: root
+          - image: mysql:5.7
+
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
 
     steps:
-      - checkout
+      - checkout:
+          path: ~/spring-back
+
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "pom.xml" }}
+            - recipe-{{ checksum "pom.xml" }}
             # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+            - recipe-
+
       - run: mvn dependency:go-offline
+
       - save_cache:
           paths:
             - ~/.m2
-          key: v1-dependencies-{{ checksum "pom.xml" }}
+          key: recipe-{{ checksum "pom.xml" }}
 
       # run tests!
       - run: mvn integration-test
