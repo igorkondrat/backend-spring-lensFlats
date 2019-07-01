@@ -1,38 +1,22 @@
+
 version: 2
 jobs:
   build:
-    working_directory: ~/spring-back/recipe
     docker:
-      # specify the version you desire here
-      - image: maven:1.8.0-jdk-8
+      - image: maven:3.5.0-jdk-8
+        environment:
+          DATABASE_URL: jdbc:mysql://127.0.0.1:8080/lensflats
+          DATABASE_USER: root
+          DATABASE_PASSWORD: root
+      - image: mysql:5.7
 
-      environment:
-        DATABASE_URL: jdbc:mysql://127.0.0.1:8080/LensFlats
-        DATABASE_USER: root
-        DATABASE_PASSWORD: root
-          - image: mysql:5.7
-
-    environment:
-      # Customize the JVM maximum heap limit
-      MAVEN_OPTS: -Xmx3200m
+    working_directory: ~/repo
 
     steps:
-      - checkout:
-          path: ~/spring-back
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - recipe-{{ checksum "pom.xml" }}
-            # fallback to using the latest cache if no exact match is found
-            - recipe-
-
-      - run: mvn dependency:go-offline
-
-      - save_cache:
-          paths:
-            - ~/.m2
-          key: recipe-{{ checksum "pom.xml" }}
-
-      # run tests!
-      - run: mvn integration-test
+      - checkout
+      - run: apt-get update -qq && apt-get install -y mysql
+      - run:
+          command: |
+            mysql -h 127.0.0.1 -U mysql -c "CREATE DATABASE lensflats;"
+            mysql -h 127.0.0.1 -U mysql -c "CREATE USER root WITH PASSWORD 'root'; GRANT ALL PRIVILEGES ON DATABASE lensflats TO root;"
+      - run: mvn test
