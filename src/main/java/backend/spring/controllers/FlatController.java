@@ -7,7 +7,6 @@ import backend.spring.models.User;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,12 +14,17 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static java.lang.System.getProperty;
+import static java.lang.System.out;
+import static java.nio.file.Files.delete;
+import static java.nio.file.Files.exists;
+import static java.util.UUID.randomUUID;
+import static org.springframework.security.core.context.SecurityContextHolder.getContext;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:4200")
@@ -43,9 +47,10 @@ public class FlatController {
         return flatDao.findAll();
     }
 
+    //TODO Rewrite. Method could not return null
     @GetMapping("/getSingleFlat/{flatId}")
     public Flat getFlat(@PathVariable("flatId") Integer flatId) {
-        for (Flat flat : userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName()).getFlatList()) {
+        for (Flat flat : userDao.findByEmail(getContext().getAuthentication().getName()).getFlatList()) {
             if (flat.getId() == flatId) {
                 return flat;
             }
@@ -58,9 +63,10 @@ public class FlatController {
         return flatDao.getFlatById(flatId);
     }
 
+    //TODO Rename standartFlatPicture (front and back) + optimize code
     @PostMapping("/flatRegister")
-    public String FlatRegister(@RequestBody Flat flat) {
-        User user = userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName());
+    public String flatRegister(@RequestBody Flat flat) {
+        User user = userDao.findByEmail(getContext().getAuthentication().getName());
         if (user != null && flat.getRooms() > 0 && flat.getSquare() > 0) {
             flat.setUser(user);
             flat.setPhotoFlats("standartFlatPicture.png");
@@ -73,7 +79,7 @@ public class FlatController {
 
     @PostMapping("/updateFlat")
     public String updateFlat(@RequestBody Flat flat) {
-        flat.setUser(userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName()));
+        flat.setUser(userDao.findByEmail(getContext().getAuthentication().getName()));
         for (String flatPhoto : flatDao.getFlatById(flat.getId()).getListPhotoFlats()) {
             flat.setPhotoFlats(flatPhoto);
         }
@@ -98,9 +104,9 @@ public class FlatController {
 
     @PostMapping("/deleteFlat{flatId}")
     public void deleteFlat(@PathVariable Integer flatId) throws IOException {
-        User user = userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName());
+        User user = userDao.findByEmail(getContext().getAuthentication().getName());
         List<Flat> flatList = user.getFlatList();
-        String baseDir = System.getProperty("user.dir");
+        String baseDir = getProperty("user.dir");
         for (Flat flat1 : flatList) {
             if (flat1.getId() == flatId) {
                 ArrayList<String> listPhotoFlats = flat1.getListPhotoFlats();
@@ -117,8 +123,8 @@ public class FlatController {
     @PostMapping("/deleteFlatPhoto/{flatPhoto}&{flatId}")
     public String deleteFlatPhoto(@PathVariable("flatPhoto") String flatPhoto,
                                   @PathVariable("flatId") Integer flatId) throws IOException {
-        User user = userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName());
-        String baseDir = System.getProperty("user.dir");
+        User user = userDao.findByEmail(getContext().getAuthentication().getName());
+        String baseDir = getProperty("user.dir");
         if (user != null) {
             List<Flat> flatList = user.getFlatList();
             for (Flat flat : flatList) {
@@ -136,18 +142,17 @@ public class FlatController {
     }
 
     private void deleteAllFlatPhoto(String baseDir, String listPhotoFlat) throws IOException {
-        if (Files.exists(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat)) && !listPhotoFlat.equals("standartFlatPicture.png")) {
-            Files.delete(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat));
+        if (exists(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat)) && !listPhotoFlat.equals("standartFlatPicture.png")) {
+            delete(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat));
         }
     }
 
     @PostMapping("/changePhotoFlat{id}")
     public String changePhotoFlat(@RequestPart("newPhotoFlat") MultipartFile[] photo,
                                   @PathVariable Integer id) throws IOException {
-        User user = userDao.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName());
-        String baseDir = System.getProperty("user.dir");
+        User user = userDao.findByEmail(getContext().getAuthentication().getName());
+        String baseDir = getProperty("user.dir");
         File uploadFolder = new File(baseDir + uploadPath + "flatsPicture");
-
         if (!uploadFolder.exists()) {
             uploadFolder.mkdir();
         }
@@ -159,17 +164,17 @@ public class FlatController {
                         Flat flat = user.getFlatList().get(j);
                         if (flat.getListPhotoFlats().size() < 10) {
                             if (flat.getListPhotoFlats().contains("standartFlatPicture.png")) {
-                                System.out.println("CustomRest/changePhotoFlat | standart flat photo remove");
+                                out.println("CustomRest/changePhotoFlat | standart flat photo remove");
                                 flat.getListPhotoFlats().removeIf(next -> next.equals("standartFlatPicture.png"));
                             }
-                            String uuidFile = UUID.randomUUID().toString();
+                            String uuidFile = randomUUID().toString();
                             String resultFileName = uuidFile + multipartFile.getOriginalFilename();
                             final File targetFile = new File(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + resultFileName);
                             targetFile.createNewFile();
                             multipartFile.transferTo(targetFile);
                             flat.setPhotoFlats(resultFileName);
                             flatDao.save(flat);
-                            System.out.println("CustomRest/changePhotoFlat | flat photo update");
+                            out.println("CustomRest/changePhotoFlat | flat photo update");
                         } else return JSONObject.quote("Maximum 10 photo");
                     }
                 }
@@ -192,7 +197,7 @@ public class FlatController {
             flat.setAverageRating(sum / rating.size());
             flatDao.save(flat);
         }
-        return "";
+        return JSONObject.quote("Rated");
     }
 
     @GetMapping("/getFilter/{rating}&{minPrice}&{maxPrice}&{rooms}")
