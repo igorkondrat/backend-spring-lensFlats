@@ -19,63 +19,209 @@
 #            mysql -h 127.0.0.1 -U mysql -c "CREATE USER root WITH PASSWORD 'root'; GRANT ALL PRIVILEGES ON DATABASE lensflats TO root;"
 #      - run: mvn test
 
+#version: 2
+#jobs:
+#  build:
+#    docker:
+#      # specify the version you desire here
+#      - image: circleci/openjdk:8-jdk
+#
+#    environment:
+#      # Customize the JVM maximum heap limit
+#      MAVEN_OPTS: -Xmx3200m
+#
+#    steps:
+#
+#      # apply the JCE unlimited strength policy to allow the PSK 256 bit key length
+#      # solution from http://qiita.com/yoskhdia/items/f4702a3abc4467de69b0
+#      - run:
+#          - checkout
+#          name: Getting JCE unlimited strength policy to allow the 256 bit keys
+#          command: |
+#            curl -L --cookie 'oraclelicense=accept-securebackup-cookie;'  http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip -o /tmp/jce_policy.zip
+#            unzip -o /tmp/jce_policy.zip -d /tmp
+#            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/US_export_policy.jar $JAVA_HOME/jre/lib/security/US_export_policy.jar
+#            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/local_policy.jar $JAVA_HOME/jre/lib/security/local_policy.jar
+#
+#      # Download and cache dependencies
+#      - restore_cache:
+#          keys:
+#            - v1-dependencies-{{ checksum "pom.xml" }}
+#            # fallback to using the latest cache if no exact match is found
+#            - v1-dependencies-
+#
+#      - run:
+#          name: Maven Install
+#          command:  mvn dependency:go-offline install
+#
+#      - save_cache:
+#          paths:
+#            - ~/.m2
+#          key: v1-dependencies-{{ checksum "pom.xml" }}
+#
+#
+#      # save tests
+#      - run:
+#          name: Save test results
+#          command: |
+#            mkdir -p ~/junit/
+#            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
+#            mkdir -p ~/checkstyle/
+#            find . -type f -regex ".*/target/checkstyle-reports/.*xml" -exec cp {} ~/junit/ \;
+#          when: always
+#
+#      - store_test_results:
+#          path: ~/junit
+#
+#      - store_artifacts:
+#          path: ~/junit
+#
+#
+#      # publish the coverage report to codecov.io
+#      - run: bash <(curl -s https://codecov.io/bash)
+
+# Copied from their sample project
+# https://github.com/CircleCI-Public/circleci-demo-go/blob/master/.circleci/config.yml
+
 version: 2
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
-
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.8
+      # CircleCI MySQL images available at: https://hub.docker.com/r/circleci/mysql/
+      - image: circleci/mysql:5.7
+        # env vars below from https://discuss.circleci.com/t/cannot-connect-to-mysql-using-default-credentials/13314/5
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=true
+          - MYSQL_ROOT_HOST=%
+          - MYSQL_USER=root
+          - MYSQL_PASSWORD=root
+    working_directory: /go/src/github.com/welnys/api
     environment:
-      # Customize the JVM maximum heap limit
-      MAVEN_OPTS: -Xmx3200m
+      TEST_RESULTS: /tmp/test-results
 
     steps:
-
-      # apply the JCE unlimited strength policy to allow the PSK 256 bit key length
-      # solution from http://qiita.com/yoskhdia/items/f4702a3abc4467de69b0
       - run:
-          - checkout
-          name: Getting JCE unlimited strength policy to allow the 256 bit keys
-          command: |
-            curl -L --cookie 'oraclelicense=accept-securebackup-cookie;'  http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip -o /tmp/jce_policy.zip
-            unzip -o /tmp/jce_policy.zip -d /tmp
-            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/US_export_policy.jar $JAVA_HOME/jre/lib/security/US_export_policy.jar
-            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/local_policy.jar $JAVA_HOME/jre/lib/security/local_policy.jar
+          name: Install mysql-client
+          command: sudo apt install mysql-client
+      - checkout
+      - run:
+          name: Make dir for test results
+          command: mkdir -p $TEST_RESULTS
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "pom.xml" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+            - v1-pkg-cache
+
+      # Get Go packages
+      - run:
+          name: Get Go packages
+          command: |
+            go get github.com/jstemmer/go-junit-report \
+            && go get -u google.golang.org/appengine \
+            && go get -u github.com/golang/dep/cmd/dep \
+            && dep ensure \
+            && go get ./...
+      # Google Cloud SDK. We need it to setup the environment with the commands below
+      # https://discuss.circleci.com/t/gcloud-permissions-error/2631/25
+      - run:
+          name: Downloading Google Cloud SDK
+          command: |
+            curl -L -o google-cloud-sdk.zip https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.zip \
+             && unzip google-cloud-sdk.zip \
+             && rm google-cloud-sdk.zip \
+             && google-cloud-sdk/install.sh \
+             --usage-reporting=false \
+             --bash-completion=true \
+             --path-update=true \
+             --quiet
+      # Install Google Cloud SDK
+      - run:
+          name: Installing Google Cloud SDK
+          command: |
+            echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json \
+             && sudo google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json \
+             && sudo google-cloud-sdk/bin/gcloud config set project welnys-api \
+             && sudo google-cloud-sdk/bin/gcloud --quiet components install app-engine-python \
+             && sudo google-cloud-sdk/bin/gcloud --quiet components install app-engine-go
+      - run:
+          name: Waiting for MySQL to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+      - run:
+          name: Installing test database
+          command: mysql -h 127.0.0.1 -u root --password=root circle_test < welnys_test_db.sql
 
       - run:
-          name: Maven Install
-          command:  mvn dependency:go-offline install
+          name: Run admin unit tests
+          command: |
+            cd admin && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run auth unit tests
+          command: cd auth && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run db unit tests
+          command: cd db && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run main unit tests
+          command: cd main && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run models unit tests
+          command: cd models && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run payments unit tests
+          command: cd payments && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run providers unit tests
+          command: cd providers && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run scheduler unit tests
+          command: cd scheduler && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
+
+      - run:
+          name: Run user unit tests
+          command: cd user && go test -v -cover
+          environment:
+            APPENGINE_DEV_APPSERVER: /go/src/github.com/welnys/api/google-cloud-sdk/bin/dev_appserver.py
 
       - save_cache:
+          key: v1-pkg-cache
           paths:
-            - ~/.m2
-          key: v1-dependencies-{{ checksum "pom.xml" }}
-
-
-      # save tests
-      - run:
-          name: Save test results
-          command: |
-            mkdir -p ~/junit/
-            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
-            mkdir -p ~/checkstyle/
-            find . -type f -regex ".*/target/checkstyle-reports/.*xml" -exec cp {} ~/junit/ \;
-          when: always
-
-      - store_test_results:
-          path: ~/junit
+            - "/go/pkg"
 
       - store_artifacts:
-          path: ~/junit
+          path: /tmp/test-results
+          destination: raw-test-output
 
-
-      # publish the coverage report to codecov.io
-      - run: bash <(curl -s https://codecov.io/bash)
+      - store_test_results:
+          path: /tmp/test-results
