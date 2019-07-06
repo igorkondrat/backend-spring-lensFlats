@@ -43,7 +43,7 @@ jobs:
             unzip -o /tmp/jce_policy.zip -d /tmp
             sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/US_export_policy.jar $JAVA_HOME/jre/lib/security/US_export_policy.jar
             sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/local_policy.jar $JAVA_HOME/jre/lib/security/local_policy.jar
-      - checkout-shallow
+      - checkout
 
       # Download and cache dependencies
       - restore_cache:
