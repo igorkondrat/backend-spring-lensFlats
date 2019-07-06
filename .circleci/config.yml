@@ -1,20 +1,83 @@
 
+#version: 2
+#jobs:
+#  build:
+#    docker:
+#      - image: maven:3.6.0-jdk-8
+#        environment:
+#          DATABASE_URL: jdbc:mysql://127.0.0.1/lensflats
+#          DATABASE_USER: root
+#          DATABASE_PASSWORD: root
+#      - image: mysql:5.7
+#
+#    steps:
+#      - checkout
+#      - run: apt-get update -qq && apt-get install -y mysql
+#      - run:
+#          command: |
+#            mysql -h 127.0.0.1 -U mysql -c "CREATE DATABASE lensflats;"
+#            mysql -h 127.0.0.1 -U mysql -c "CREATE USER root WITH PASSWORD 'root'; GRANT ALL PRIVILEGES ON DATABASE lensflats TO root;"
+#      - run: mvn test
+
 version: 2
 jobs:
   build:
     docker:
-      - image: maven:3.6.0-jdk-8
-        environment:
-          DATABASE_URL: jdbc:mysql://127.0.0.1/lensflats
-          DATABASE_USER: root
-          DATABASE_PASSWORD: root
-      - image: mysql:5.7
+      # specify the version you desire here
+      - image: circleci/openjdk:8-jdk
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      MAVEN_OPTS: -Xmx3200m
 
     steps:
-      - checkout
-      - run: apt-get update -qq && apt-get install -y mysql
+
+      # apply the JCE unlimited strength policy to allow the PSK 256 bit key length
+      # solution from http://qiita.com/yoskhdia/items/f4702a3abc4467de69b0
       - run:
+          name: Getting JCE unlimited strength policy to allow the 256 bit keys
           command: |
-            mysql -h 127.0.0.1 -U mysql -c "CREATE DATABASE lensflats;"
-            mysql -h 127.0.0.1 -U mysql -c "CREATE USER root WITH PASSWORD 'root'; GRANT ALL PRIVILEGES ON DATABASE lensflats TO root;"
-      - run: mvn test
+            curl -L --cookie 'oraclelicense=accept-securebackup-cookie;'  http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip -o /tmp/jce_policy.zip
+            unzip -o /tmp/jce_policy.zip -d /tmp
+            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/US_export_policy.jar $JAVA_HOME/jre/lib/security/US_export_policy.jar
+            sudo mv -f /tmp/UnlimitedJCEPolicyJDK8/local_policy.jar $JAVA_HOME/jre/lib/security/local_policy.jar
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "pom.xml" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run:
+          name: Maven Install
+          command:  mvn dependency:go-offline install
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+
+
+      # save tests
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/junit/
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
+            mkdir -p ~/checkstyle/
+            find . -type f -regex ".*/target/checkstyle-reports/.*xml" -exec cp {} ~/junit/ \;
+          when: always
+
+      - store_test_results:
+          path: ~/junit
+
+      - store_artifacts:
+          path: ~/junit
+
+
+      # publish the coverage report to codecov.io
+      - run: bash <(curl -s https://codecov.io/bash)
