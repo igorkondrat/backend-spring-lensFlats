@@ -5,7 +5,7 @@
 #    docker:
 #      - image: maven:3.6.0-jdk-8
 #        environment:
-#          DATABASE_URL: jdbc:mysql://127.0.0.1/lensflats
+#          DATABASE_URL: jdbc:mysql://localhost:8080/LensFlats
 #          DATABASE_USER: root
 #          DATABASE_PASSWORD: root
 #      - image: mysql:5.7
@@ -104,7 +104,7 @@ jobs:
     steps:
       - run:
           name: Install mysql-client
-          command: sudo apt install mysql-client
+          command: sudo apt install mysql
       - checkout
       - run:
           name: Make dir for test results
