@@ -104,7 +104,7 @@ jobs:
     steps:
       - run:
           name: Install mysql-client
-          command: sudo apt install mysql
+          command: sudo apt install mysql-client
       - checkout
       - run:
           name: Make dir for test results
