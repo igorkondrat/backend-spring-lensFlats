@@ -56,14 +56,14 @@ public class FlatControllerTest {
 
 
     @Test(groups = {"unit"})
-    public void getAllFlats() {
+    public void testGetAllFlats() {
         when(flatDao.findAll()).thenReturn(flats);
         List<Flat> allFlats = flatController.getAllFlats();
         assertEquals(allFlats, flats);
     }
 
-    @DataProvider(name = "getFlatAnonymousDP")
-    public Object[][] getFlatAnonymousDP() {
+    @DataProvider(name = "testGetFlatAnonymousDP")
+    public Object[][] testGetFlatAnonymousDP() {
         return new Object[][]{
                 {-24},
                 {-0},
@@ -74,15 +74,15 @@ public class FlatControllerTest {
         };
     }
 
-    @Test(groups = {"unit"}, dataProvider = "getFlatAnonymousDP")
-    public void getFlatAnonymous(Integer flatId) {
+    @Test(groups = {"unit"}, dataProvider = "testGetFlatAnonymousDP")
+    public void testGetFlatAnonymous(Integer flatId) {
         when(flatDao.getFlatById(flatId)).thenReturn(flat);
         Flat flatAnonymous = flatController.getFlatAnonymous(flatId);
         assertEquals(flatAnonymous, flat);
     }
 
-    @DataProvider(name = "starFilterDP")
-    public Object[][] starFilterDP() {
+    @DataProvider(name = "testStarFilterDP")
+    public Object[][] testStarFilterDP() {
         List<Flat> allFlats = asList(flat("My FLat", 4500, 81.5, 9, 3, 5, 5),
                 flat("My FLat", 4500, 81.5, 9, 3, 5, 5),
                 flat("His FLat", 5500, 1.5, 8, 4, 4, 4.3),
@@ -97,10 +97,10 @@ public class FlatControllerTest {
         };
     }
 
-    @Test(groups = {"unit"}, dataProvider = "starFilterDP")
-    public void starFilter(int rating, int minPrice, int maxPrice, int rooms, List<Flat> allFlats, List<Flat> expectedFlats) {
+    @Test(groups = {"unit"}, dataProvider = "testStarFilterDP")
+    public void testStarFilter(int rating, int minPrice, int maxPrice, int rooms, List<Flat> allFlats, List<Flat> expectedFlats) {
         when(flatDao.findAll()).thenReturn(allFlats);
-        List<Flat> filteredFlatList = flatController.starFilter(rating, minPrice, maxPrice, rooms);
+        List<Flat> filteredFlatList = flatController.getFilter(rating, minPrice, maxPrice, rooms);
         assertEquals(filteredFlatList, expectedFlats);
     }
 
