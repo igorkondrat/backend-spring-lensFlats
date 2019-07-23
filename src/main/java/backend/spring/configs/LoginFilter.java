@@ -1,5 +1,8 @@
 package backend.spring.configs;
 
+import backend.spring.controllers.PasswordController;
+import backend.spring.dao.UserDao;
+import backend.spring.models.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,9 +14,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import backend.spring.controllers.CustomRestController;
-import backend.spring.dao.UserDao;
-import backend.spring.models.User;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -94,7 +94,7 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
     }
 
     private void setResponseHeaders(HttpServletResponse response) {
-        CustomRestController.setResponseHeaders(response);
+        PasswordController.setResponseHeaders(response);
     }
 
 }

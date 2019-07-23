@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.lang.System.getProperty;
-import static java.lang.System.out;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.exists;
+import static java.util.Comparator.comparingInt;
 import static java.util.UUID.randomUUID;
 import static org.springframework.security.core.context.SecurityContextHolder.getContext;
 
@@ -80,9 +80,7 @@ public class FlatController {
     @PostMapping("/updateFlat")
     public String updateFlat(@RequestBody Flat flat) {
         flat.setUser(userDao.findByEmail(getContext().getAuthentication().getName()));
-        for (String flatPhoto : flatDao.getFlatById(flat.getId()).getListPhotoFlats()) {
-            flat.setPhotoFlats(flatPhoto);
-        }
+        flatDao.getFlatById(flat.getId()).getListPhotoFlats().forEach(flat::setPhotoFlats);
         Flat flatById = flatDao.getFlatById(flat.getId());
         if (flatById != null
                 && flat.getSquare() > 0
@@ -93,9 +91,7 @@ public class FlatController {
                 && flat.getStoreys() > 0) {
             flat.setAverageRating(flatById.getAverageRating());
             flatById.setWallingMaterial(flat.getWallingMaterial());
-            for (Double aDouble : flatById.getRating()) {
-                flat.setRating(aDouble);
-            }
+            flatById.getRating().forEach(flat::setRating);
             flatDao.save(flat);
             return JSONObject.quote("Flat was updated");
         }
@@ -107,9 +103,9 @@ public class FlatController {
         User user = userDao.findByEmail(getContext().getAuthentication().getName());
         List<Flat> flatList = user.getFlatList();
         String baseDir = getProperty("user.dir");
-        for (Flat flat1 : flatList) {
-            if (flat1.getId() == flatId) {
-                ArrayList<String> listPhotoFlats = flat1.getListPhotoFlats();
+        for (Flat flat : flatList) {
+            if (flat.getId() == flatId) {
+                ArrayList<String> listPhotoFlats = flat.getListPhotoFlats();
                 for (String flatPhoto : listPhotoFlats) {
                     deleteAllFlatPhoto(baseDir, flatPhoto);
                 }
@@ -142,11 +138,13 @@ public class FlatController {
     }
 
     private void deleteAllFlatPhoto(String baseDir, String listPhotoFlat) throws IOException {
-        if (exists(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat)) && !listPhotoFlat.equals("standartFlatPicture.png")) {
+        if (exists(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat))
+                && !listPhotoFlat.equals("standartFlatPicture.png")) {
             delete(Paths.get(baseDir + uploadPath + File.separator + "flatsPicture" + File.separator + listPhotoFlat));
         }
     }
 
+    //TODO Do something with mkdir() and createNewFile()
     @PostMapping("/changePhotoFlat{id}")
     public String changePhotoFlat(@RequestPart("newPhotoFlat") MultipartFile[] photo,
                                   @PathVariable Integer id) throws IOException {
@@ -164,7 +162,7 @@ public class FlatController {
                         Flat flat = user.getFlatList().get(j);
                         if (flat.getListPhotoFlats().size() < 10) {
                             if (flat.getListPhotoFlats().contains("standartFlatPicture.png")) {
-                                out.println("CustomRest/changePhotoFlat | standart flat photo remove");
+                                System.out.println("FlatController.class -> changePhotoFlat() | standart flat photo removed");
                                 flat.getListPhotoFlats().removeIf(next -> next.equals("standartFlatPicture.png"));
                             }
                             String uuidFile = randomUUID().toString();
@@ -174,7 +172,7 @@ public class FlatController {
                             multipartFile.transferTo(targetFile);
                             flat.setPhotoFlats(resultFileName);
                             flatDao.save(flat);
-                            out.println("CustomRest/changePhotoFlat | flat photo update");
+                            System.out.println("FlatController.class -> changePhotoFlat() | flat photo update");
                         } else return JSONObject.quote("Maximum 10 photo");
                     }
                 }
@@ -201,20 +199,31 @@ public class FlatController {
     }
 
     @GetMapping("/getFilter/{rating}&{minPrice}&{maxPrice}&{rooms}")
-    public List<Flat> starFilter(@PathVariable("rating") int rating,
-                                 @PathVariable("minPrice") int minPrice,
-                                 @PathVariable("maxPrice") int maxPrice,
-                                 @PathVariable("rooms") int rooms) {
-        List<Flat> filteredFlatList = flatDao.findAll()
+    public List<Flat> getFilter(@PathVariable("rating") int rating,
+                                @PathVariable("minPrice") int minPrice,
+                                @PathVariable("maxPrice") int maxPrice,
+                                @PathVariable("rooms") int rooms) {
+        List<Flat> filteredFlatList = getAllFlats()
                 .stream()
-                .filter(flat -> flat.getAverageRating() != null && flat.getAverageRating() >= rating)
-                .filter(flat -> flat.getPrice() >= minPrice)
-                .filter(flat -> flat.getPrice() <= maxPrice)
+                .filter(flat -> flat.getAverageRating() >= rating && flat.getAverageRating() < rating + 1)
+                .filter(flat -> flat.getPrice() >= minPrice && flat.getPrice() <= maxPrice)
+                .sorted(comparingInt(Flat::getPrice))
                 .collect(Collectors.toList());
         if (rooms != 0) {
             if (rooms == 5) {
                 filteredFlatList.removeIf(next -> next.getRooms() < rooms);
-            } else filteredFlatList.removeIf(next -> next.getRooms() != rooms);
+            } else {
+                filteredFlatList.removeIf(next -> next.getRooms() != rooms);
+            }
+        }
+        if(rooms == 0 && rating == 0){
+            List<Flat> flatList = getAllFlats()
+                    .stream()
+                    .filter(flat -> flat.getPrice() >= minPrice && flat.getPrice() <= maxPrice)
+                    .sorted(comparingInt(Flat::getPrice))
+                    .collect(Collectors.toList());
+            filteredFlatList.clear();
+            filteredFlatList.addAll(flatList);
         }
         return filteredFlatList;
     }

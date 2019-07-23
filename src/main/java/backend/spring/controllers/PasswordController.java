@@ -1,45 +1,30 @@
 package backend.spring.controllers;
 
+import backend.spring.dao.UserDao;
+import backend.spring.models.User;
+import backend.spring.services.MailService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import backend.spring.dao.FlatDao;
-import backend.spring.dao.MessageDao;
-import backend.spring.dao.UserDao;
-import backend.spring.models.Flat;
-import backend.spring.models.Message;
-import backend.spring.models.MessageHistory;
-import backend.spring.models.User;
-import backend.spring.services.MailService;
 
-import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletResponse;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+
+import static java.util.UUID.randomUUID;
+import static org.springframework.security.core.context.SecurityContextHolder.getContext;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:4200")
-public class CustomRestController {
+public class PasswordController {
 
     private UserDao userDao;
     private PasswordEncoder passwordEncoder;
     private MailService mailService;
 
     @Autowired
-    public CustomRestController(UserDao userDao, PasswordEncoder passwordEncoder, MailService mailService) {
+    public PasswordController(UserDao userDao, PasswordEncoder passwordEncoder, MailService mailService) {
         this.userDao = userDao;
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
@@ -70,7 +55,7 @@ public class CustomRestController {
         String currentRawPassword = s.split("\"")[3];
         String newPassword = s.split("\"")[7];
         String confirmNewPassword = s.split("\"")[11];
-        String currentUserName = SecurityContextHolder.getContext().getAuthentication().getName();
+        String currentUserName = getContext().getAuthentication().getName();
         User user = userDao.findByEmail(currentUserName);
         if (user != null) {
             if (passwordEncoder.matches(currentRawPassword, user.getPassword())) {
@@ -94,7 +79,7 @@ public class CustomRestController {
         String email = body.substring(body.indexOf(":\"") + 2, body.indexOf("\"}"));
         User user = userDao.findByEmail(email);
         if (user != null) {
-            user.setRestorePassword(UUID.randomUUID().toString());
+            user.setRestorePassword(randomUUID().toString());
             userDao.save(user);
             mailService.send(user.getEmail(), "Hello," + user.getName() + ". To set new password follow the link:" +
                     "<!DOCTYPE html>\n" +
@@ -108,7 +93,7 @@ public class CustomRestController {
                     + "</body>\n" +
                     "</html>", "Forgot password?");
         }
-        return "";
+        return JSONObject.quote("No user");
     }
 
     public static void setResponseHeaders(HttpServletResponse response) {
